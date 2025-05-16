@@ -7,6 +7,9 @@
 const readline = require("readline-sync");
 const MESSAGES = require("./loan_calculator_messages.json");
 
+// Constants
+const MONTHS_IN_YEAR = 12;
+
 function messages(message) {
   return MESSAGES[message];
 }
@@ -23,10 +26,11 @@ function invalidNumber(number) {
   );
 }
 
-prompt(messages("welcome"));
+function clearScreen() {
+  console.clear();
+}
 
-while (true) {
-  // Get and validate loan amount
+function getLoanAmount() {
   prompt(messages("loanAmount"));
   let loanAmount = readline.question();
 
@@ -34,9 +38,11 @@ while (true) {
     prompt(messages("invalidNumber"));
     loanAmount = readline.question();
   }
-  loanAmount = parseFloat(loanAmount);
 
-  // Get and validate APR
+  return parseFloat(loanAmount);
+}
+
+function getAnnualPercentageRate() {
   prompt(messages("annualPercentageRate"));
   let annualPercentageRate = readline.question();
 
@@ -44,9 +50,11 @@ while (true) {
     prompt(messages("invalidNumber"));
     annualPercentageRate = readline.question();
   }
-  annualPercentageRate = parseFloat(annualPercentageRate) / 100; // Convert percentage to decimal
 
-  // Get and validate loan duration
+  return parseFloat(annualPercentageRate) / 100; // Convert percentage to decimal
+}
+
+function getLoanDurationYears() {
   prompt(messages("loanDurationYears"));
   let loanDurationYears = readline.question();
 
@@ -54,32 +62,96 @@ while (true) {
     prompt(messages("invalidNumber"));
     loanDurationYears = readline.question();
   }
-  loanDurationYears = Number(loanDurationYears);
-  let loanDurationMonths = loanDurationYears * 12;
 
-  // Calculate monthly payment
-  const monthlyInterestRate = annualPercentageRate / 12;
-
-  let monthlyPayment;
-  if (monthlyInterestRate === 0) {
-    monthlyPayment = loanAmount / loanDurationMonths;
-  } else {
-    monthlyPayment =
-      loanAmount *
-      (monthlyInterestRate /
-        (1 - Math.pow(1 + monthlyInterestRate, -loanDurationMonths)));
-  }
-
-  // Display result
-  prompt(`The monthly payment is: $${monthlyPayment.toFixed(2)}`);
-
-  // Ask if the user wants to perform another calculation
-  prompt(
-    messages("anotherCalculation") ||
-      "Would you like to perform another calculation? (y/n)"
-  );
-  let answer = readline.question().toLowerCase();
-  if (answer !== "y" && answer !== "yes") break;
+  return Number(loanDurationYears);
 }
 
-prompt(messages("thankYou"));
+function calculateMonthlyPayment(
+  loanAmount,
+  monthlyInterestRate,
+  loanDurationMonths
+) {
+  if (monthlyInterestRate === 0) {
+    return loanAmount / loanDurationMonths;
+  } else {
+    return (
+      loanAmount *
+      (monthlyInterestRate /
+        (1 - Math.pow(1 + monthlyInterestRate, -loanDurationMonths)))
+    );
+  }
+}
+
+function displayLoanSummary(
+  loanAmount,
+  annualPercentageRate,
+  loanDurationYears,
+  monthlyPayment,
+  totalPayment,
+  totalInterest
+) {
+  prompt("\n--- Loan Summary ---");
+  prompt(`Loan Amount: $${loanAmount.toFixed(2)}`);
+  prompt(`Annual Percentage Rate: ${(annualPercentageRate * 100).toFixed(2)}%`);
+  prompt(
+    `Loan Duration: ${loanDurationYears} years (${
+      loanDurationYears * MONTHS_IN_YEAR
+    } months)`
+  );
+  prompt(`Monthly Payment: $${monthlyPayment.toFixed(2)}`);
+  prompt(`Total Payment: $${totalPayment.toFixed(2)}`);
+  prompt(`Total Interest: $${totalInterest.toFixed(2)}`);
+  prompt("-------------------\n");
+}
+
+function runLoanCalculator() {
+  prompt(messages("welcome"));
+
+  while (true) {
+    // Get inputs
+    const loanAmount = getLoanAmount();
+    const annualPercentageRate = getAnnualPercentageRate();
+    const loanDurationYears = getLoanDurationYears();
+    const loanDurationMonths = loanDurationYears * MONTHS_IN_YEAR;
+
+    // Calculate payments
+    const monthlyInterestRate = annualPercentageRate / MONTHS_IN_YEAR;
+    const monthlyPayment = calculateMonthlyPayment(
+      loanAmount,
+      monthlyInterestRate,
+      loanDurationMonths
+    );
+
+    // Calculate additional information
+    const totalPayment = monthlyPayment * loanDurationMonths;
+    const totalInterest = totalPayment - loanAmount;
+
+    // Display results
+    displayLoanSummary(
+      loanAmount,
+      annualPercentageRate,
+      loanDurationYears,
+      monthlyPayment,
+      totalPayment,
+      totalInterest
+    );
+
+    // Ask about another calculation
+    prompt(
+      messages("anotherCalculation") ||
+        "Would you like to perform another calculation? (y/n)"
+    );
+    let answer = readline.question().toLowerCase();
+    if (answer !== "y" && answer !== "yes") break;
+
+    // Clear screen for next calculation
+    clearScreen();
+  }
+
+  prompt(
+    messages("thankYou") || "Thank you for using the Loan Calculator. Goodbye!"
+  );
+}
+
+// Start the program
+runLoanCalculator();
